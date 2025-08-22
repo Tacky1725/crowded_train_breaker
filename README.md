@@ -2,9 +2,14 @@
 ## 傾き制御プログラム
 ### スケッチ
 - actuator_dual: アクチュエータの制御
+- actuator_feedback: 傾きのフィードバック制御プログラム
 - read_voltage: 可変抵抗で傾きをアナログ入力で取得する
 
 ## ESP32-DevKitC-32E へのインポート
+### ピン配置
+- https://www.farmsoft.jp/1274/
+- https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html#functional-description
+
 ### CP210xドライバを入れる（Windows）
 
 - Silicon Labs の CP210x VCP Drivers をインストール。
