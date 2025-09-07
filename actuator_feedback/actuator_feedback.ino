@@ -1,4 +1,4 @@
-
+// 可変抵抗は時計回りを角度が増加する方向となるに接続すること
 
 // モータードライバ（L9110S）ーに接続するピンを定義
 const int motorPinA1 = 25;  // アクチュエータA 用 IN1
@@ -31,7 +31,7 @@ void setup() {
 
   // 角度の初期値（水平時の値）を取得
 
-  delay(1000);
+  delay(5000);
   int initialAngle1 = getAngle();
   delay(1000);
   int initialAngle2 = getAngle();
@@ -45,8 +45,7 @@ void setup() {
 }
 
 void loop() {
-  stopFlag = 0;
-  getAngle();
+  // getAngle();
   if (Serial.available() > 0) {
     char c = Serial.read();
 
@@ -59,31 +58,58 @@ void loop() {
     delay(100);
 
     switch (c) {
-      case 'W':  // 上相当 → 両方伸ばす (forward)
-        forwardA();
-        forwardB();
-        Serial.println("Command: W (Both Forward)");
-        break;
-
-      case 'S':  // 下相当 → 両方縮める (reverse)
+      // フィードバック制御用
+      case 'W':  // 上相当 → 両方縮める (reverse)
+        // フィードバック処理に要修正      
         reverseA();
         reverseB();
-        Serial.println("Command: S (Both Reverse)");
         break;
 
-      case 'A':           // 左相当 → A伸ばす, B縮める
-        moveToAngle(-30);  // 反時計回り30度
-        Serial.println("Command: A (A Forward, B Reverse - 反時計回り30度)");
+      case 'S':  // 下相当 → 両方伸ばす (forward)
+        // フィードバック処理に要修正
+        forwardA();
+        forwardB();
         break;
 
-      case 'D':            // 右相当 → A縮める, B伸ばす
-        moveToAngle(30);  // 時計回り30度
-        Serial.println("Command: D (A Reverse, B Forward - 時計回り30度)");
+      case 'A':           // 左相当 → A縮める, B伸ばす
+        moveToAngle(20);  // つまみが時計回り20度の傾き
         break;
-      
-      case 'G':  //進行中の感じ
-        Serial.println("Command: G (random move)");
-        driveMode();
+
+      case 'D':            // 右相当 → A伸ばす, B縮める
+        moveToAngle(-20);  // つまみが反時計回り20度の傾き
+        break;
+
+      case 'X':  // 左右方向を水平にする
+        moveToAngle(0);
+        break;
+
+      case 'C':  // 上下方向を水平にする
+        // 要作成
+        break;
+
+      // 手動制御用
+      case 'U':  // 上相当 → 両方縮める (reverse)
+        reverseA();
+        reverseB();
+        Serial.println("Command: U (Both Reverse)");
+        break;
+
+      case 'J':  // 下相当 → 両方伸ばす (forward)
+        forwardA();
+        forwardB();
+        Serial.println("Command: J (Both Forward)");
+        break;
+
+      case 'H':  // 左相当 → A縮める, B伸ばす
+        reverseA();
+        forwardB();
+        Serial.println("Command: H (reverse A, forward B)");
+        break;
+
+      case 'K': // 右相当 → A伸ばす, B縮める
+        forwardA();
+        reverseB();
+        Serial.println("Command: K (forward A, reverse B)");
         break;
 
       default:  // その他キー → 停止
@@ -105,29 +131,20 @@ void moveToAngle(int targetRelativeAngle) {
   int targetAngle = initialAngle + targetRelativeAngle;  // 目標の絶対角度(可変抵抗の角度) を計算
 
   while (1) {
-    Serial.println("while");
-    if (Serial.available() > 0) {
-    char c = Serial.read();
-    if (c == 'Q'){
-      Serial.println("Command: Q (stop moveToAngle command)");
-      stopFlag = -1;
-      break; //中断できるように 
-    }
-    }
-    /*
-    Serial.print(targetRelativeAngle);
-    Serial.print("\t");
+    Serial.print("initialAngle: ");
+    Serial.print(initialAngle);
+    Serial.print("\t targetRelativeAngle: ");
     Serial.print(targetAngle);
-    Serial.print("\t");
-    Serial.println(getAngle());
-    */
+    Serial.print("\t currentAngle: ");
+    int currentAngle = getAngle();
+    Serial.println(currentAngle);
 
-    if (tolerance < getAngle() - targetAngle) {
-      Serial.println("反時計回り");
+    if (tolerance < currentAngle - targetAngle) {
+      Serial.println("つまみ反時計回り");
       forwardA();
       reverseB();
-    } else if (tolerance < targetAngle - getAngle()) {
-      Serial.println("時計回り");
+    } else if (tolerance < targetAngle - currentAngle) {
+      Serial.println("つまみ時計回り");
       reverseA();
       forwardB();
     } else {
@@ -169,12 +186,13 @@ int getAngle() {
 
   int angle = map(analogin, 0, 4095, 0, 270);       // アナログ入力レンジ => 角度指示レンジに変換
   int percentage = map(analogin, 0, 4095, 0, 100);  // アナログ入力レンジ => アナログ出力レンジに変換
-/*
-  Serial.print("analogin: ");
-  Serial.print(analogin);
-  Serial.print(", Angle: ");
-  Serial.print(angle);
-  */
+
+  // Serial.print("initialAngle: ");
+  // Serial.print(initialAngle);
+  // Serial.print(", analogin: ");
+  // Serial.print(analogin);
+  // Serial.print(", Angle: ");
+  // Serial.println(angle);
 
   return angle;
 }

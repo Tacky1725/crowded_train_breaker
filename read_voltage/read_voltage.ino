@@ -6,7 +6,7 @@ void setup() {
 }
 
 void loop() {
-  Serial.print(getAnalogInput());  //回転角度指示値をシリアル出力
+  Serial.println(getAnalogInput());  //回転角度指示値をシリアル出力
   delay(50);                 //0.05秒ウェイト
 }
 
