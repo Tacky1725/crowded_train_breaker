@@ -27,6 +27,45 @@ int currentAnalogInputLR = 0;
 
 int stopFlag = 0;
 
+// 緊急停止コマンド関連
+const char EMERG1 = 'Q'; // 緊急コマンド（大文字Q）
+const char EMERG2 = 'q'; // 予備（小文字q）
+volatile bool emergency_requested = false;
+
+// 緊急コマンドをポーリング（受信していたら true を返す）
+bool pollEmergency()
+{
+  while (Serial.available() > 0)
+  {
+    char c = Serial.read();
+    if (c == '\r' || c == '\n')
+      continue; // 改行は無視
+    if (c == EMERG1 || c == EMERG2)
+    {
+      emergency_requested = true;
+      Serial.println("\n!!! EMERGENCY RECEIVED !!!");
+      return true;
+    }
+  }
+  return emergency_requested;
+}
+
+// 必要な場面でリセット
+inline void clearEmergency() { emergency_requested = false; }
+
+// delay中も中断できるようにするヘルパ
+bool delayWithAbort(unsigned long ms)
+{
+  unsigned long start = millis();
+  while (millis() - start < ms)
+  {
+    if (pollEmergency())
+      return true; // true = 中断要求あり
+    delay(1);
+  }
+  return false;
+}
+
 void setup()
 {
   pinMode(motorPinA1, OUTPUT);
@@ -199,64 +238,161 @@ void resetinitialAngleLR()
 // 前後に振動
 void moveFrontBack(int times)
 {
+  clearEmergency();
+
   reverseSlowA();
   forwardSlowB();
-  delay(250);
-  stopA();
-  stopB();
-  for (int count = 1; count <= times; count++)
+  if (delayWithAbort(250))
   {
-    forwardSlowA(); // 台時計回り
-    reverseSlowB();
-    delay(400);
     stopA();
     stopB();
-    reverseSlowA(); // 台時計回り
-    forwardSlowB();
-    delay(500);
-    stopA();
-    stopB();
+    moveToAngleFrontBack(0);
+    return;
   }
   stopA();
   stopB();
-  forwardSlowA();
-  reverseSlowB();
-  delay(250);
+
+  for (int count = 1; count <= times; count++)
+  {
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleFrontBack(0);
+      return;
+    }
+
+    forwardSlowA(); // 台時計回り
+    reverseSlowB();
+    if (delayWithAbort(400))
+    {
+      stopA();
+      stopB();
+      moveToAngleFrontBack(0);
+      return;
+    }
+    stopA();
+    stopB();
+
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleFrontBack(0);
+      return;
+    }
+
+    reverseSlowA(); // 台時計回り
+    forwardSlowB();
+    if (delayWithAbort(500))
+    {
+      stopA();
+      stopB();
+      moveToAngleFrontBack(0);
+      return;
+    }
+    stopA();
+    stopB();
+  }
+
   stopA();
   stopB();
-  return;
+
+  forwardSlowA();
+  reverseSlowB();
+  if (delayWithAbort(250))
+  {
+    stopA();
+    stopB();
+    moveToAngleFrontBack(0);
+    return;
+  }
+  stopA();
+  stopB();
 }
 
 // 左右に振動
 void moveLeftRight(int times)
 {
-  delay(100);
+  clearEmergency();
+
+  if (delayWithAbort(100))
+  {
+    stopA();
+    stopB();
+    moveToAngleLeftRight(0);
+    return;
+  }
+
   forwardSlowA();
   forwardSlowB();
-  delay(400);
-  stopA();
-  stopB();
-  for (int count = 1; count <= times; count++)
+  if (delayWithAbort(400))
   {
-    reverseSlowA();
-    reverseSlowB();
-    delay(770);
     stopA();
     stopB();
-    forwardSlowA();
-    forwardSlowB();
-    delay(800);
-    stopA();
-    stopB();
+    moveToAngleLeftRight(0);
+    return;
   }
   stopA();
   stopB();
-  reverseSlowA();
-  reverseSlowB();
-  delay(400);
+
+  for (int count = 1; count <= times; count++)
+  {
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+
+    reverseSlowA();
+    reverseSlowB();
+    if (delayWithAbort(770))
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+    stopA();
+    stopB();
+
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+
+    forwardSlowA();
+    forwardSlowB();
+    if (delayWithAbort(800))
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+    stopA();
+    stopB();
+  }
+
   stopA();
   stopB();
-  return;
+
+  reverseSlowA();
+  reverseSlowB();
+  if (delayWithAbort(400))
+  {
+    stopA();
+    stopB();
+    moveToAngleLeftRight(0);
+    return;
+  }
+  stopA();
+  stopB();
 }
 
 void moveGatanGoton(int times)
@@ -306,13 +442,22 @@ void printAngle()
 // 角度を指定して前後移動（後ろが正）
 void moveToAngleFrontBack(int targetRelativeAngle)
 {
+  clearEmergency(); // ← 直前の緊急状態をクリア
   Serial.print("move to ");
   Serial.println(targetRelativeAngle);
 
-  int targetAngleFB = initialAngleFB + targetRelativeAngle; // 目標の絶対角度(可変抵抗の角度) を計算
+  int targetAngleFB = initialAngleFB + targetRelativeAngle;
 
   while (1)
   {
+    if (pollEmergency())
+    { // ★ 追加：緊急コマンド検知
+      stopA();
+      stopB();
+      Serial.println("ABORTED: moveToAngleFrontBack");
+      return;
+    }
+
     Serial.print("initialAngleFB: ");
     Serial.print(initialAngleFB);
     Serial.print("\t targetRelativeAngleFB: ");
@@ -323,13 +468,11 @@ void moveToAngleFrontBack(int targetRelativeAngle)
 
     if (TOLERANCE < currentAngle - targetAngleFB)
     {
-      Serial.println("つまみ反時計回り");
       forwardSlowA();
       reverseSlowB();
     }
     else if (TOLERANCE < targetAngleFB - currentAngle)
     {
-      Serial.println("つまみ時計回り");
       reverseSlowA();
       forwardSlowB();
     }
@@ -345,13 +488,22 @@ void moveToAngleFrontBack(int targetRelativeAngle)
 // 角度を指定して左右移動（左が正）
 void moveToAngleLeftRight(int targetRelativeAngle)
 {
+  clearEmergency(); // ← 直前の緊急状態をクリア
   Serial.print("move to ");
   Serial.println(targetRelativeAngle);
 
-  int targetAngleLR = initialAngleLR + targetRelativeAngle; // 目標の絶対角度(可変抵抗の角度) を計算
+  int targetAngleLR = initialAngleLR + targetRelativeAngle;
 
   while (1)
   {
+    if (pollEmergency())
+    { // ★ 追加：緊急コマンド検知
+      stopA();
+      stopB();
+      Serial.println("ABORTED: moveToAngleLeftRight");
+      return;
+    }
+
     Serial.print("initialAngleLR: ");
     Serial.print(initialAngleLR);
     Serial.print("\t targetRelativeAngleLR: ");
@@ -362,13 +514,11 @@ void moveToAngleLeftRight(int targetRelativeAngle)
 
     if (TOLERANCE < currentAngle - targetAngleLR)
     {
-      Serial.println("つまみ時計回り");
       forwardSlowA();
       forwardSlowB();
     }
     else if (TOLERANCE < targetAngleLR - currentAngle)
     {
-      Serial.println("つまみ反時計回り");
       reverseSlowA();
       reverseSlowB();
     }
