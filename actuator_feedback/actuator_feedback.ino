@@ -460,7 +460,7 @@ void moveLeftRightVerySlow(int times)
 
     forwardVerySlowA();
     forwardVerySlowB();
-    if (delayWithAbort(2000))
+    if (delayWithAbort(2100))
     {
       stopA();
       stopB();
@@ -558,7 +558,6 @@ void moveToAngleFrontBack(int targetRelativeAngle)
     Serial.print("\t currentAngleFB: ");
     int currentAngle = getAngleFB();
     Serial.println(currentAngle);
-    
 
     if (TOLERANCE < currentAngle - targetAngleFB)
     {
