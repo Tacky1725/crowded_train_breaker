@@ -10,6 +10,7 @@ const int potentio_SOCKET_LR = 35; // 可変抵抗器のアナログ入力ソケ
 
 const int SPEED_FAST = 255;
 const int SPEED_SLOW = 255 / 3;
+const int SPEED_VERY_SLOW = 255 / 4;
 
 const int TOLERANCE = 0; // 傾き制御の角度許容誤差
 
@@ -161,11 +162,15 @@ void loop()
       break;
 
     case 'O': // 前後に振動
-      moveFrontBack(10);
+      moveFrontBack(1000);
       break;
 
     case 'P': // 左右に振動
-      moveLeftRight(10);
+      moveLeftRight(1000);
+      break;
+
+    case 'L': // 左右に振動（ゆっくり）
+      moveLeftRightVerySlow(1000);
       break;
 
     case 'G': // ガタンゴトン動作
@@ -373,6 +378,7 @@ void moveLeftRight(int times)
       stopA();
       stopB();
       moveToAngleLeftRight(0);
+      moveToAngleFrontBack(0);
       return;
     }
     stopA();
@@ -384,6 +390,93 @@ void moveLeftRight(int times)
 
   reverseSlowA();
   reverseSlowB();
+  if (delayWithAbort(400))
+  {
+    stopA();
+    stopB();
+    moveToAngleLeftRight(0);
+    moveToAngleFrontBack(0);
+    return;
+  }
+  stopA();
+  stopB();
+}
+
+// 左右に振動（ゆっくり）
+void moveLeftRightVerySlow(int times)
+{
+  clearEmergency();
+
+  if (delayWithAbort(100))
+  {
+    stopA();
+    stopB();
+    moveToAngleLeftRight(0);
+    return;
+  }
+
+  forwardVerySlowA();
+  forwardVerySlowB();
+  if (delayWithAbort(400))
+  {
+    stopA();
+    stopB();
+    moveToAngleLeftRight(0);
+    return;
+  }
+  stopA();
+  stopB();
+
+  for (int count = 1; count <= times; count++)
+  {
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+
+    reverseVerySlowA();
+    reverseVerySlowB();
+    if (delayWithAbort(2000))
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      moveToAngleFrontBack(0);
+      return;
+    }
+    stopA();
+    stopB();
+
+    if (pollEmergency())
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      return;
+    }
+
+    forwardVerySlowA();
+    forwardVerySlowB();
+    if (delayWithAbort(2000))
+    {
+      stopA();
+      stopB();
+      moveToAngleLeftRight(0);
+      moveToAngleFrontBack(0);
+      return;
+    }
+    stopA();
+    stopB();
+  }
+
+  stopA();
+  stopB();
+
+  reverseVerySlowA();
+  reverseVerySlowB();
   if (delayWithAbort(400))
   {
     stopA();
@@ -465,6 +558,7 @@ void moveToAngleFrontBack(int targetRelativeAngle)
     Serial.print("\t currentAngleFB: ");
     int currentAngle = getAngleFB();
     Serial.println(currentAngle);
+    
 
     if (TOLERANCE < currentAngle - targetAngleFB)
     {
@@ -636,6 +730,26 @@ void reverseSlowA()
 void reverseSlowB()
 {
   reverse(motorPinB1, motorPinB2, SPEED_SLOW);
+}
+
+void forwardVerySlowA()
+{
+  forward(motorPinA1, motorPinA2, SPEED_VERY_SLOW);
+}
+
+void forwardVerySlowB()
+{
+  forward(motorPinB1, motorPinB2, SPEED_VERY_SLOW);
+}
+
+void reverseVerySlowA()
+{
+  reverse(motorPinA1, motorPinA2, SPEED_VERY_SLOW);
+}
+
+void reverseVerySlowB()
+{
+  reverse(motorPinB1, motorPinB2, SPEED_VERY_SLOW);
 }
 
 void stopA()
