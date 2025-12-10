@@ -1,8 +1,8 @@
 // モータードライバ（L9110S）ーに接続するピンを定義
-const int motorPinA1 = 7;   // アクチュエータA 用 IN1
-const int motorPinA2 = 8;   // アクチュエータA 用 IN2
-const int motorPinB1 = 11;  // アクチュエータB 用 IN1
-const int motorPinB2 = 12;  // アクチュエータB 用 IN2
+const int motorPinA1 = 25;   // アクチュエータA 用 IN1
+const int motorPinA2 = 26;   // アクチュエータA 用 IN2
+const int motorPinB1 = 32;  // アクチュエータB 用 IN1
+const int motorPinB2 = 33;  // アクチュエータB 用 IN2
 
 const int motorPinPwmA = 3;  // アクチュエータA 用 PWMピン
 const int motorPinPwmB = 5;  // アクチュエータB 用 PWMピン
@@ -14,8 +14,8 @@ void setup() {
   pinMode(motorPinB1, OUTPUT);
   pinMode(motorPinB2, OUTPUT);
 
-  pinMode(motorPinPwmA, OUTPUT);
-  pinMode(motorPinPwmB, OUTPUT);
+  // pinMode(motorPinPwmA, OUTPUT);
+  // pinMode(motorPinPwmB, OUTPUT);
 
   Serial.begin(9600);
   Serial.println("W/S/A/D でアクチュエータ制御（W:上, S:下, A:左, D:右, 他: 停止）");
@@ -96,14 +96,14 @@ void forward(int motorPin1, int motorPin2, int motorPinPwm) {
   digitalWrite(motorPin1, HIGH);
   digitalWrite(motorPin2, LOW);
 
-  analogWrite(motorPinPwm, SPEED);
+  // analogWrite(motorPinPwm, SPEED);
 }
 
 void reverse(int motorPin1, int motorPin2, int motorPinPwm) {
   digitalWrite(motorPin1, LOW);
   digitalWrite(motorPin2, HIGH);
 
-  analogWrite(motorPinPwm, SPEED);
+  // analogWrite(motorPinPwm, SPEED);
 }
 
 void stop(int motorPin1, int motorPin2) {
